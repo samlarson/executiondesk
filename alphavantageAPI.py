@@ -16,9 +16,9 @@ class AVCall:
         self.api_key = "FFK3WVR52378LU0Q"
         self.url = "https://www.alphavantage.co/query"
 
+
     # Returns intraday time series (timestamp, open, high, low, close, volume) of
     # the equity specified, updated realtime.
-
     # symbol: the name of the equity of your choice. Example, symbol = MSFT
     # interval: Time interval between two consecutive data points in the time series.
     #           Supports: 1min, 5min, 15min, 30min, 60min
@@ -36,9 +36,9 @@ class AVCall:
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
 
+
     # Returns daily time series (date, daily open, daily high, daily low, daily close,
     # daily volume) of the equity specified, covering up to 20 years of historical data.
-
     # symbol: the name of the equity of your choice. Example, symbol = MSFT
     # datatype: Strings json and csv are accepted with the following specifications:
     #           json returns the time series in JSON format; csv returns the time
@@ -121,16 +121,13 @@ class AVCall:
 
 
 class Preprocess:
-
     # Prints contents of csv file onto terminal / IDE.
     # data: csv file returned from any one of the methods above.
     # TODO: this can probably be deleted because we can print from createFrame or any above functions
     def printData(self, data):
         with requests.Session() as s:
             data_csv = data
-
             decoded_content = data_csv.content.decode('utf-8')
-
             cr = csv.reader(decoded_content.splitlines(), delimiter=',')
             my_list = list(cr)
             for row in my_list:
@@ -165,7 +162,4 @@ class Preprocess:
             writer.writeheader()
             with open(input_data, "r") as f:
                 reader = csv.reader(f)
-                writer.writerows({'Date': row[0], 'Open': row[1]}
-                                for row in reader
-                                )
-
+                writer.writerows({'Date': row[0], 'Open': row[1]} for row in reader)
