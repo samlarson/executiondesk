@@ -3,6 +3,9 @@
     <words>
       <w>csv</w>
       <w>dataframe</w>
+      <w>dtype</w>
+      <w>intraday</w>
+      <w>ohlc</w>
     </words>
   </dictionary>
 </component>
