@@ -1,6 +1,9 @@
+# ADDED TO PRIVATE REPO
+
 import numpy as np
 import pandas as pd
 import sklearn
+import ta
 
 
 #TODO: add function to iterate through list/object of securities and implement strategy and recommendation
@@ -16,3 +19,10 @@ class Strategy:
                 sec_list = []
             if market_type == 'ETF':
                 sec_list = []
+
+        def bollinger(df):
+            # Add bollinger band high indicator filling NaN values
+            df['bb_high_indicator'] = ta.bollinger_hband_indicator(df["close"], n=20, ndev=2, fillna=True)
+
+            # Add bollinger band low indicator filling NaN values
+            df['bb_low_indicator'] = ta.bollinger_lband_indicator(df["close"], n=20, ndev=2, fillna=True)

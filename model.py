@@ -25,23 +25,25 @@ class ModelType:
                 raise ValueError("Please check the dtype of timestamp field")
 
             model = sm.OLS(y, x).fit()
-            predict = model.predict(x)
+            # predict = model.predict(x)
             # print(predict)
             print(model.summary())
             # print(isinstance(x, datetime.date))
             # print(frame.columns.values)
+
+            print(df)
+
             sb.set(color_codes=True)
             sb.distplot(x)
             plt.show()
             sb.distplot(y)
             plt.show()
 
-
     # Plots a simple 2D graph of the specified columns
-    #TODO: replace seaborn dependencies with plotly
-    #TODO: consolidate dataframe processing steps in single method
-    #TODO: resolve historical slice error (only displaying '00-'02)
-    #TODO: add OHLC graph
+    # TODO: replace seaborn dependencies with plotly
+    # TODO: consolidate dataframe processing steps in single method
+    # TODO: resolve historical slice error (only displaying '00-'02)
+    # TODO: add OHLC graph
     class Graph:
         def simple_graph(self, df):
             frame = df.iloc[::-1]
@@ -66,7 +68,6 @@ class ModelType:
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2f'))
             plt.show()
 
-
         # Creates a simple candlestick plot for a given security
         # Currently the only method from avAPI.py that needs to be called with fine-grain is intraday requests
         def candlestick(self, df, grain):
@@ -76,7 +77,8 @@ class ModelType:
             if grain == "low-grain":
                 ts_frame['timestamp'] = ts_frame['timestamp'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d'))
             if grain == "fine-grain":
-                ts_frame['timestamp'] = ts_frame['timestamp'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S'))
+                ts_frame['timestamp'] = ts_frame['timestamp']\
+                    .apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S'))
             else:
                 raise KeyError("Timestamp format could not be converted to datetime object, check grain parameter")
 
@@ -104,7 +106,7 @@ class ModelType:
             data = [trace]
             fig = go.Figure(data=data, layout=layout)
             offline.plot(fig, filename='graph.html')
-            #print(ts_frame)
+            # print(ts_frame)
 
 
         def multi_scatter(self, df, grain):
@@ -157,3 +159,118 @@ class ModelType:
             plot_data = [trace1, trace2]
             fig = go.Figure(data=plot_data, layout=layout)
             offline.plot(fig, filename='multiscatter.html')
+
+        def macd_graph(self, df):
+            df.rename(columns={'time': 'timestamp'}, inplace=True)
+            frame = df.iloc[::-1]
+            ts_frame = pd.DataFrame(data=frame)
+            ts_frame['timestamp'] = ts_frame['timestamp'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M'))
+
+            ts_frame.index = range(len(ts_frame))
+            start_date = ts_frame['timestamp'].iloc[0]
+            end_date = ts_frame['timestamp'].iloc[-1]
+            date_slice = pd.date_range(start=start_date, end=end_date)
+            ts_frame.set_index('timestamp', inplace=True)
+
+            trace1 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['MACD'],
+                name='MACD',
+            )
+
+            trace2 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['MACD_Hist'],
+                name='MACD_HIST',
+                yaxis='y2'
+            )
+            trace3 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['MACD_Signal'],
+                name='MACD_Signal',
+                yaxis='y3'
+            )
+            layout = go.Layout(
+                title='Moving Average Convergence Divergence',
+                xaxis=dict(
+                    rangeslider=dict(
+                        visible=False
+                    )
+                ),
+                yaxis=dict(
+                    title='MACD'
+                ),
+                yaxis2=dict(
+                    title='MACD Hist/Signal',
+                    overlaying='y',
+                    side='right'
+                ),
+                yaxis3=dict(
+                    title='',
+                    overlaying='y',
+                    side='right'
+                )
+            )
+
+            plot_data = [trace1, trace2, trace3]
+            fig = go.Figure(data=plot_data, layout=layout)
+            offline.plot(fig, filename='MACD.html')
+
+
+        def candle_bbands(self, df):
+            frame = df.iloc[::-1]
+            ts_frame = pd.DataFrame(data=frame)
+
+            ts_frame['timestamp'] = ts_frame['timestamp']\
+                .apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M'))
+
+            ts_frame.index = range(len(ts_frame))
+            start_date = ts_frame['timestamp'].iloc[0]
+            end_date = ts_frame['timestamp'].iloc[-1]
+            # start_date = '2018-09-17 14:00'
+            # end_date = '2018-10-17 11:30'
+            date_slice = pd.date_range(start=start_date, end=end_date, freq='H')
+            ts_frame.set_index('timestamp', inplace=True)
+
+            trace1 = go.Candlestick(x=date_slice,
+                                   open=ts_frame['open'],
+                                   high=ts_frame['high'],
+                                   low=ts_frame['low'],
+                                   close=ts_frame['close'])
+            trace2 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['Real Lower Band'],
+                name='Lower Band',
+                yaxis='y2'
+            )
+            trace3 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['Real Middle Band'],
+                name='Middle Band',
+                yaxis='y2'
+            )
+            trace4 = go.Scatter(
+                x=date_slice,
+                y=ts_frame['Real Upper Band'],
+                name='Upper Band',
+                yaxis='y2'
+            )
+
+            layout = go.Layout(
+                title='Candlestick Bollinger Bands',
+                xaxis=go.layout.XAxis(
+                    title='Time',
+                    tickmode='array',
+                    tickvals=list(range(len(ts_frame.index))),
+                    ticktext=ts_frame.index),
+                yaxis=go.layout.YAxis(
+                    title='Price'),
+                yaxis2 = dict(
+                    title='Bollinger Bands',
+                    overlaying='y',
+                    side='right'
+                ))
+
+            data = [trace1, trace2, trace3, trace4]
+            fig = go.Figure(data=data, layout=layout)
+            offline.plot(fig, filename='graph.html')

@@ -6,6 +6,7 @@ import json
 import requests
 import numpy as np
 import pandas as pd
+import datetime as dt
 import matplotlib.pyplot as plt
 from urllib.request import urlopen
 from pandas.io.json import json_normalize
@@ -16,26 +17,25 @@ class AVCall:
         self.api_key = "FFK3WVR52378LU0Q"
         self.url = "https://www.alphavantage.co/query"
 
-
     # Returns intraday time series (timestamp, open, high, low, close, volume) of
-    # the equity specified, updated realtime.
+    # the equity specified, updated real-time.
     # symbol: the name of the equity of your choice. Example, symbol = MSFT
     # interval: Time interval between two consecutive data points in the time series.
     #           Supports: 1min, 5min, 15min, 30min, 60min
     # datatype: Strings json and csv are accepted with the following specifications:
     #           json returns the time series in JSON format; csv returns the time
-    #           series as a CSV (comma seperated value) file.
+    #           series as a CSV (comma separated value) file.
     # api_key:  AlphaVantage API Key
     def getDataIntraDay(self, symbol, interval, datatype):
         data = { "function": "TIME_SERIES_INTRADAY",
                  "interval": interval,
                  "symbol": symbol,
+                 "outputsize": "full",
                  "datatype": datatype,
                  "apikey": self.api_key}
         url_response = requests.get(self.url, params=data).content
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
-
 
     # Returns daily time series (date, daily open, daily high, daily low, daily close,
     # daily volume) of the equity specified, covering up to 20 years of historical data.
@@ -53,7 +53,6 @@ class AVCall:
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
 
-
     # Returns daily time series (date, daily open, daily high, daily low, daily close,
     # daily volume, daily adjusted close, and split/dividend events) of the equity specified,
     # covering up to 20 years of historical data.
@@ -65,7 +64,6 @@ class AVCall:
         url_response = requests.get(self.url, params=data).content
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
-
 
     # Returns weekly time series (last trading day of each week, weekly open, weekly high,
     # weekly low, weekly close, weekly volume) of the equity specified, covering up to 20
@@ -79,7 +77,6 @@ class AVCall:
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
 
-
     # Returns weekly adjusted time series (last trading day of each week, weekly open,
     # weekly high, weekly low, weekly close, weekly adjusted close, weekly volume,
     # weekly dividend) of the equity specified, covering up to 20 years of historical data.
@@ -92,7 +89,6 @@ class AVCall:
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
 
-
     # Returns monthly time series (last trading day of each month, monthly open,
     # monthly high, monthly low, monthly close, monthly volume) of the equity
     # specified, covering up to 20 years of historical data.
@@ -104,7 +100,6 @@ class AVCall:
         url_response = requests.get(self.url, params=data).content
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
-
 
     # Returns monthly adjusted time series (last trading day of each month, monthly
     # open, monthly high, monthly low, monthly close, monthly adjusted close,
@@ -119,12 +114,70 @@ class AVCall:
         df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
         return df_response
 
+    def getMACD (self, symbol, interval, series_type, datatype):
+        data = { "function": "MACD",
+                 "symbol": symbol,
+                 "interval": interval,
+                 "series_type": series_type,
+                 "datatype": datatype,
+                 "apikey": self.api_key}
+        url_response = requests.get(self.url, params=data).content
+        df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
+        return df_response
+
+    def getBBands (self, symbol, interval, time_period, series_type, matype, datatype):
+        data = { "function": "BBANDS",
+                 "symbol": symbol,
+                 "interval": interval,
+                 "time_period": time_period,
+                 "series_type": series_type,
+                 "matype": matype,
+                 "datatype": datatype,
+                 "apikey": self.api_key}
+        url_response = requests.get(self.url, params=data).content
+        df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
+        return df_response
+
+    def getSMA (self, symbol, interval, time_period, series_type, datatype):
+        data = { "function": "SMA",
+                 "symbol": symbol,
+                 "interval": interval,
+                 "time_period": time_period,
+                 "series_type": series_type,
+                 "datatype": datatype,
+                 "apikey": self.api_key}
+        url_response = requests.get(self.url, params=data).content
+        df_response = pd.read_csv(io.StringIO(url_response.decode('utf-8')))
+        return df_response
+
 
 class Preprocess:
+
+    def concat_df(self, df1, df2):
+        if 'time' in df1.columns:
+            df1.rename(columns={'time': 'timestamp'}, inplace=True)
+        if 'time' in df2.columns:
+            df2.rename(columns={'time': 'timestamp'}, inplace=True)
+
+        frame1 = df1.iloc[::-1]
+        ts_frame1 = pd.DataFrame(data=frame1)
+        ts_frame1['timestamp'] = ts_frame1['timestamp'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M'))
+        frame2 = df2.iloc[::-1]
+        ts_frame2 = pd.DataFrame(data=frame2)
+        ts_frame2['timestamp'] = ts_frame2['timestamp'].apply(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S'))
+
+        df1['timestamp'] = pd.to_datetime(df1['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
+        df2['timestamp'] = pd.to_datetime(df2['timestamp']).dt.strftime('%Y-%m-%d %H:%M')
+
+        df = pd.concat(objs=[df1, df2],  axis=1, join='inner', ignore_index=True)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print(df)
+        return df
+
     # Prints contents of csv file onto terminal / IDE.
     # data: csv file returned from any one of the methods above.
     # TODO: this can probably be deleted because we can print from createFrame or any above functions
-    def printData(self, data):
+    def print_data(self, data):
         with requests.Session() as s:
             data_csv = data
             decoded_content = data_csv.content.decode('utf-8')
@@ -134,7 +187,7 @@ class Preprocess:
                 print(row)
 
     # TODO: handle potential csv/json calls from main method; possibly remove "json_normalize" method on dataframe call
-    def createFrame(self, data):
+    def create_frame(self, data):
         # json_data = data.text
         # print(json_data)
         # x = json.loads(json_data)
